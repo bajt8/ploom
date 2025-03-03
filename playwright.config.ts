@@ -1,4 +1,5 @@
 import { defineConfig, devices } from '@playwright/test';
+import { markets, MarketConfig } from './src/config/markets';
 
 /**
  * Read environment variables from file.
@@ -7,6 +8,25 @@ import { defineConfig, devices } from '@playwright/test';
 // import dotenv from 'dotenv';
 // import path from 'path';
 // dotenv.config({ path: path.resolve(__dirname, '.env') });
+
+declare module '@playwright/test' {
+  interface TestOptions {
+    marketConfig: MarketConfig;
+  }
+
+  interface PlaywrightTestOptions {
+    marketConfig: MarketConfig;
+  }
+}
+
+const marketProjects = Object.entries(markets).map(([name, config]) => ({
+    name,
+    use: {
+        ...devices['Desktop Chrome'],
+        baseURL: config.baseURL,
+        marketConfig: config,
+    },
+}));
 
 /**
  * See https://playwright.dev/docs/test-configuration.
@@ -31,44 +51,12 @@ export default defineConfig({
     /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
     trace: 'on-first-retry',
   },
-
+  timeout: 30 * 1000,
+  expect: {
+    timeout: 5000,
+  },
   /* Configure projects for major browsers */
-  projects: [
-    {
-      name: 'chromium',
-      use: { ...devices['Desktop Chrome'] },
-    },
-
-    {
-      name: 'firefox',
-      use: { ...devices['Desktop Firefox'] },
-    },
-
-    {
-      name: 'webkit',
-      use: { ...devices['Desktop Safari'] },
-    },
-
-    /* Test against mobile viewports. */
-    // {
-    //   name: 'Mobile Chrome',
-    //   use: { ...devices['Pixel 5'] },
-    // },
-    // {
-    //   name: 'Mobile Safari',
-    //   use: { ...devices['iPhone 12'] },
-    // },
-
-    /* Test against branded browsers. */
-    // {
-    //   name: 'Microsoft Edge',
-    //   use: { ...devices['Desktop Edge'], channel: 'msedge' },
-    // },
-    // {
-    //   name: 'Google Chrome',
-    //   use: { ...devices['Desktop Chrome'], channel: 'chrome' },
-    // },
-  ],
+  projects: marketProjects,
 
   /* Run your local dev server before starting the tests */
   // webServer: {
