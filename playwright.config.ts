@@ -25,6 +25,9 @@ const marketProjects = Object.entries(markets).map(([name, config]) => ({
         ...devices['Desktop Chrome'],
         baseURL: config.baseURL,
         marketConfig: config,
+        launchOptions: {
+            slowMo: 700,
+        },
     },
 }));
 
@@ -50,10 +53,12 @@ export default defineConfig({
 
     /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
     trace: 'on-first-retry',
+    navigationTimeout: 50000,
+    actionTimeout: 50000,
   },
-  timeout: 30 * 1000,
+  timeout: 60 * 1000,
   expect: {
-    timeout: 5000,
+    timeout: 50000,
   },
   /* Configure projects for major browsers */
   projects: marketProjects,

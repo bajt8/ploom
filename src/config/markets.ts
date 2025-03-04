@@ -9,4 +9,7 @@ export const markets: Record<string, MarketConfig> = {
   pl: {
       baseURL: 'https://www.ploom.pl/pl',
   },
+  // de: {
+  //     baseURL: 'https://www.ploom.de/de',
+  // },
 };

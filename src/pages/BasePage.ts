@@ -1,5 +1,4 @@
 import { Page } from '@playwright/test';
-import { MarketConfig } from '../config/markets';
 import { markets } from '../config/market-patterns.config';
 import { MarketPattern } from '../types/market-types';
 
@@ -7,24 +6,55 @@ export class BasePage {
     protected market: string;
     protected marketPattern: MarketPattern;
     
-    constructor(protected page: Page, protected marketConfig: MarketConfig) {
-        this.market = Object.keys(markets).find(
-            market => marketConfig.baseURL.includes(markets[market].domain)
-        ) || 'uk';
+    constructor(protected page: Page, market: string) {
+        this.market = market;
         this.marketPattern = markets[this.market];
+
+        if (!this.marketPattern) {
+            throw new Error(`Market pattern not found for market: ${market}`);
+        }
+
+        this.setupErrorHandling();
+    }
+
+    /**
+     * Sets up error handling for navigation responses
+     * Catches 404s and other HTTP errors for main document requests
+     */
+    private setupErrorHandling(): void {
+        this.page.on('response', async response => {
+            const isMainNavigation = response.request().resourceType() === 'document';
+            if (isMainNavigation) {
+                if (response.status() === 404) {
+                    throw new Error(`Page not found: ${response.url()}`);
+                }
+                if (response.status() >= 400) {
+                    throw new Error(`Navigation failed with status ${response.status()}: ${response.url()}`);
+                }
+            }
+        });
     }
 
     /**
      * Builds a full URL with optional additional paths
      */
     private buildFullUrl(...paths: string[]): string {
-        // Check if baseURL already contains the language prefix
-        const baseUrlWithLang = this.marketConfig.baseURL.includes(`/${this.marketPattern.language}`)
-            ? this.marketConfig.baseURL
-            : `${this.marketConfig.baseURL}/${this.marketPattern.language}`;
-
-        // Join base URL with additional paths
-        return [baseUrlWithLang, ...paths].filter(Boolean).join('/');
+        const baseUrl = `https://www.${this.marketPattern.domain}`;
+        
+        const allPaths = [
+            this.marketPattern.language,
+            ...paths
+        ];
+        
+        const cleanPaths = allPaths
+            .filter(Boolean)
+            .map(path => path.replace(/^\/+/, ''))
+            .join('/');
+        
+        const cleanBaseUrl = baseUrl.replace(/\/+$/, '');
+        const finalPath = cleanPaths ? `/${cleanPaths}` : '';
+        
+        return `${cleanBaseUrl}${finalPath}`;
     }
 
     /**
@@ -47,10 +77,26 @@ export class BasePage {
     }
 
     /**
-     * Navigates to a specific path
+     * Navigates to a specific path with error handling
      */
     async navigate(path: string): Promise<void> {
-        await this.page.goto(this.getMarketUrl(path));
+        try {
+            const response = await this.page.goto(this.getMarketUrl(path));
+            
+            if (!response?.ok()) {
+                throw new Error(`Navigation failed with status ${response?.status()}: ${response?.url()}`);
+            }
+
+            await this.page.waitForLoadState('networkidle', { timeout: 10000 }).catch(() => {
+
+                console.warn('Network idle timeout - continuing test');
+            });
+        } catch (error) {
+            if (error.message.includes('Network idle timeout')) {
+                return;
+            }
+            throw new Error(`Failed to navigate to ${path}: ${error.message}`);
+        }
     }
 
     /**

@@ -40,7 +40,7 @@ test.describe('Market URL Validation Tests', () => {
         market = testInfo.project.name;
         marketConfig = testInfo.project.use.marketConfig as MarketConfig;
         patterns = markets[market];
-        homePage = new HomePage(page, marketConfig);
+        homePage = new HomePage(page, market);
         
         // Skip test if market configuration is missing
         test.skip(!patterns, `No configuration defined for market: ${market}`);

@@ -1,11 +1,14 @@
 import { Page } from '@playwright/test';
-import { MarketConfig } from '../config/markets';
 import { BasePage } from './BasePage';
+import { markets } from '../config/market-patterns.config';
 
 export class HomePage extends BasePage {
-    constructor(page: Page, marketConfig: MarketConfig) {
-        super(page, marketConfig);
+    constructor(page: Page, market: string) {
+        super(page, market);
     }
+
+    // Locators
+    private readonly acceptCookiesButton = '#onetrust-accept-btn-handler';
 
     /**
      * Navigates to home page
@@ -18,7 +21,8 @@ export class HomePage extends BasePage {
      * Navigates to shop page
      */
     async goToShop(): Promise<void> {
-        await this.navigate('/shop');
+        const shopLinkTestId = markets[this.market].testIds.shopLink;
+        await this.page.click(`[data-testid="${shopLinkTestId}"]`);
     }
 
     /**
@@ -35,10 +39,12 @@ export class HomePage extends BasePage {
         await this.page.goto(this.getProductUrl(productType, productSlug));
     }
 
-    /**
-     * Navigates to cart page
-     */
-    async goToCart(): Promise<void> {
-        await this.page.goto(this.getCartUrl());
+    async acceptCookies() {
+        await this.page.click(this.acceptCookiesButton);
+    }
+
+    async confirmAge() {
+        const confirmText = markets[this.market].testIds.confirmAgeText;
+        await this.page.click(`text=${confirmText}`);
     }
 }
